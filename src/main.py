@@ -5,7 +5,7 @@ Run with:
     python -m src.main
 """
 
-from recommender import load_songs, recommend_songs
+from src.recommender import load_songs, recommend_songs
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +48,10 @@ WEEKEND_DRIVER = {
     "likes_acoustic": False,
 }
 
-ACTIVE_PROFILE = CHILL_LISTENER   # ← swap this to test different profiles
+ACTIVE_PROFILE = WEEKEND_DRIVER   # ← swap this to test different profiles
+
+MAX_SCORE = 5.5
+WIDTH     = 62
 
 
 def main() -> None:
@@ -60,20 +63,31 @@ def main() -> None:
         id(WEEKEND_DRIVER):  "Weekend Driver",
     }.get(id(ACTIVE_PROFILE), "Custom Profile")
 
-    print(f"\nActive profile: {profile_name}")
-    print(f"  genre={ACTIVE_PROFILE['genre']}, "
-          f"mood={ACTIVE_PROFILE['mood']}, "
-          f"energy={ACTIVE_PROFILE['energy']}, "
-          f"valence={ACTIVE_PROFILE['valence']}, "
-          f"likes_acoustic={ACTIVE_PROFILE['likes_acoustic']}")
+    # ── header ──────────────────────────────────────────────
+    print()
+    print("=" * WIDTH)
+    print(f"  Music Recommender  |  {profile_name}")
+    print(f"  genre: {ACTIVE_PROFILE['genre']}"
+          f"  |  mood: {ACTIVE_PROFILE['mood']}"
+          f"  |  energy: {ACTIVE_PROFILE['energy']}"
+          f"  |  valence: {ACTIVE_PROFILE['valence']}")
+    print(f"  catalog: {len(songs)} songs  |  showing top 5")
+    print("=" * WIDTH)
 
     recommendations = recommend_songs(ACTIVE_PROFILE, songs, k=5)
 
-    print("\nTop recommendations:\n")
-    for song, score, explanation in recommendations:
-        print(f"  {song['title']} by {song['artist']}  [{song['genre']} / {song['mood']}]")
-        print(f"  Score: {score:.2f}  |  {explanation}")
-        print()
+    # ── results ─────────────────────────────────────────────
+    print()
+    for rank, (song, score, reasons) in enumerate(recommendations, start=1):
+        title_line = f"  #{rank}  {song['title']}  by  {song['artist']}"
+        meta       = f"[{song['genre']} / {song['mood']}]"
+        score_str  = f"Score: {score:.2f} / {MAX_SCORE}"
+
+        print(title_line)
+        print(f"       {meta:<28} {score_str}")
+        for reason in reasons:
+            print(f"       > {reason}")
+        print("-" * WIDTH)
 
 
 if __name__ == "__main__":

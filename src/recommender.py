@@ -38,36 +38,77 @@ class Recommender:
         self.songs = songs
 
     def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
+        """Return the top-k Song objects ranked by score for the given user profile."""
         # TODO: Implement recommendation logic
         return self.songs[:k]
 
     def explain_recommendation(self, user: UserProfile, song: Song) -> str:
+        """Return a plain-language string explaining why a song was recommended."""
         # TODO: Implement explanation logic
         return "Explanation placeholder"
 
 def load_songs(csv_path: str) -> List[Dict]:
-    """
-    Loads songs from a CSV file.
-    Required by src/main.py
-    """
-    # TODO: Implement CSV loading logic
-    print(f"Loading songs from {csv_path}...")
-    return []
+    """Read songs.csv and return a list of dicts with numeric fields cast to int/float."""
+    import csv
+    songs = []
+    with open(csv_path, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            row['id']           = int(row['id'])
+            row['energy']       = float(row['energy'])
+            row['tempo_bpm']    = int(row['tempo_bpm'])
+            row['valence']      = float(row['valence'])
+            row['danceability'] = float(row['danceability'])
+            row['acousticness'] = float(row['acousticness'])
+            songs.append(row)
+    return songs
 
 def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
-    """
-    Scores a single song against user preferences.
-    Required by recommend_songs() and src/main.py
-    """
-    # TODO: Implement scoring logic using your Algorithm Recipe from Phase 2.
-    # Expected return format: (score, reasons)
-    return []
+    """Score one song against user preferences; return (total_score, reason_strings)."""
+    score = 0.0
+    reasons = []
 
-def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tuple[Dict, float, str]]:
-    """
-    Functional implementation of the recommendation logic.
-    Required by src/main.py
-    """
-    # TODO: Implement scoring and ranking logic
-    # Expected return format: (song_dict, score, explanation)
-    return []
+    # Genre match: +2.0 (largest fixed bonus — most deliberate user choice)
+    if song['genre'] == user_prefs['genre']:
+        score += 2.0
+        reasons.append("genre match (+2.0)")
+    else:
+        reasons.append(f"no genre match  (song: {song['genre']}, want: {user_prefs['genre']}) (+0.0)")
+
+    # Mood match: +1.5 (emotional intent signal)
+    if song['mood'] == user_prefs['mood']:
+        score += 1.5
+        reasons.append("mood match (+1.5)")
+    else:
+        reasons.append(f"no mood match  (song: {song['mood']}, want: {user_prefs['mood']}) (+0.0)")
+
+    # Energy similarity: up to +1.0
+    # Both values are in [0, 1], so difference is at most 1.0
+    energy_points = (1.0 - abs(user_prefs['energy'] - song['energy'])) * 1.0
+    score += energy_points
+    reasons.append(f"energy similarity  {song['energy']:.2f} vs {user_prefs['energy']:.2f} (+{energy_points:.2f})")
+
+    # Valence similarity: up to +0.5
+    valence_points = (1.0 - abs(user_prefs['valence'] - song['valence'])) * 0.5
+    score += valence_points
+    reasons.append(f"valence similarity  {song['valence']:.2f} vs {user_prefs['valence']:.2f} (+{valence_points:.2f})")
+
+    # Acousticness fit: +0.5
+    # likes_acoustic=True rewards high acousticness (>= 0.5); False rewards low (< 0.5)
+    acoustic_match = (user_prefs['likes_acoustic'] and song['acousticness'] >= 0.5) or \
+                     (not user_prefs['likes_acoustic'] and song['acousticness'] < 0.5)
+    if acoustic_match:
+        score += 0.5
+        reasons.append(f"acousticness fit  {song['acousticness']:.2f} (+0.5)")
+    else:
+        reasons.append(f"acousticness mismatch  {song['acousticness']:.2f} (+0.0)")
+
+    return score, reasons
+
+def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tuple[Dict, float, List[str]]]:
+    """Score every song, sort descending, and return the top-k (song, score, reasons) tuples."""
+    return sorted(
+        ((song, *score_song(user_prefs, song)) for song in songs),
+        key=lambda item: item[1],
+        reverse=True,
+    )[:k]
