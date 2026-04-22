@@ -244,5 +244,79 @@ A few sentences about what you learned:
 - How did building this change how you think about real music recommenders
 - Where do you think human judgment still matters, even if the model seems "smart"
 
-- Screnshot of reccomendations
-![alt text](image.png)
+- Screenshot of recommendations (single run)
+![Terminal output showing top-5 recommendations for the High-Energy Pop profile: #1 Sunrise City 5.44/5.5, genre+mood match, high energy/valence fit](image.png)
+
+- Profile recs — top-5 results for each of the six user profiles
+
+**High-Energy Pop** (`pop / happy / energy 0.78`)
+![High-Energy Pop profile: #1 Sunrise City 5.44, #2 Gym Hero 3.83, #3 Rooftop Lights 3.48, #4 Crown the Night 1.96, #5 Fuego de Noche 1.89](image-1.png)
+
+```
+#1  Sunrise City     [pop / happy]       Score: 5.44 / 5.5  genre+mood match
+#2  Gym Hero         [pop / intense]     Score: 3.83 / 5.5  genre match only
+#3  Rooftop Lights   [indie pop / happy] Score: 3.48 / 5.5  mood match only
+#4  Crown the Night  [hip-hop/confident] Score: 1.96 / 5.5  energy+acousticness only
+#5  Fuego de Noche   [latin / festive]   Score: 1.89 / 5.5  energy+acousticness only
+```
+
+**Chill Lofi** (`lofi / chill / energy 0.38`)
+![Chill Lofi profile: #1 Library Rain 5.47, #2 Midnight Coding 5.44, #3 Focus Flow 3.98, #4 Spacewalk Thoughts 3.38, #5 Coffee Shop Stories 1.94](image-2.png)
+
+```
+#1  Library Rain        [lofi / chill]    Score: 5.47 / 5.5  genre+mood+perfect valence
+#2  Midnight Coding     [lofi / chill]    Score: 5.44 / 5.5  genre+mood match
+#3  Focus Flow          [lofi / focused]  Score: 3.98 / 5.5  genre match only
+#4  Spacewalk Thoughts  [ambient / chill] Score: 3.38 / 5.5  mood match only
+#5  Coffee Shop Stories [jazz / relaxed]  Score: 1.94 / 5.5  energy+acousticness only
+```
+
+**Deep Intense Rock** (`rock / intense / energy 0.90`)
+![Deep Intense Rock profile: #1 Storm Runner 5.41, #2 Gym Hero 3.41, #3 Crown the Night 1.84, #4 Drop the World 1.83, #5 Sunrise City 1.82](image-3.png)
+
+```
+#1  Storm Runner    [rock / intense]  Score: 5.41 / 5.5  genre+mood match
+#2  Gym Hero        [pop / intense]   Score: 3.41 / 5.5  mood match only
+#3  Crown the Night [hip-hop/confid.] Score: 1.84 / 5.5  energy+acousticness only
+#4  Drop the World  [edm / euphoric]  Score: 1.83 / 5.5  energy+acousticness only
+#5  Sunrise City    [pop / happy]     Score: 1.82 / 5.5  energy+acousticness only
+```
+
+**Conflicted Soul** *(adversarial)* — `lofi / sad / energy 0.90 / likes_acoustic`
+![Conflicted Soul adversarial profile: genre and energy contradict each other; best score only 3.34. #1 Midnight Coding 3.34, #2 Focus Flow 3.31, #3 Library Rain 3.25, #4 Drift Apart 2.58, #5 Blue Hour 1.45](image-4.png)
+
+```
+#1  Midnight Coding  [lofi / chill]     Score: 3.34 / 5.5  genre wins; mood+energy miss
+#2  Focus Flow       [lofi / focused]   Score: 3.31 / 5.5  genre wins; mood+energy miss
+#3  Library Rain     [lofi / chill]     Score: 3.25 / 5.5  genre wins; mood+energy miss
+#4  Drift Apart      [dream pop / sad]  Score: 2.58 / 5.5  mood match; no genre/acoustic
+#5  Blue Hour        [blues/melanchol.] Score: 1.45 / 5.5  nothing matches well
+Observation: contradiction between high-energy and lofi/acoustic caps best score at 3.34.
+The only "sad" song (Drift Apart) lands at #4 because it loses the genre and acoustic bonus.
+```
+
+**Genre Ghost** *(adversarial)* — `country / nostalgic` (genre absent from catalog)
+![Genre Ghost adversarial profile: genre bonus always zero. #1 Porch Light 3.45 via mood match, #2-#5 cluster between 2.00-1.91 decided by energy/valence/acousticness alone](image-5.png)
+
+```
+#1  Porch Light          [folk/nostalgic] Score: 3.45 / 5.5  mood match saves it
+#2  Library Rain         [lofi / chill]   Score: 2.00 / 5.5  perfect energy+valence fit
+#3  Focus Flow           [lofi / focused] Score: 1.94 / 5.5  near-perfect energy fit
+#4  Coffee Shop Stories  [jazz / relaxed] Score: 1.93 / 5.5  energy+acousticness fit
+#5  Midnight Coding      [lofi / chill]   Score: 1.91 / 5.5  energy+acousticness fit
+Observation: without genre bonus, #2-#5 are nearly tied (2.00→1.91); numeric features
+alone are meaningful but not decisive.
+```
+
+**The Maximizer** *(adversarial)* — `edm / euphoric / energy 1.0 / valence 1.0`
+![The Maximizer adversarial profile: boundary values energy=1.0 valence=1.0. Drop the World dominates at 5.39/5.5; cliff drop to #2 Gym Hero at 1.81 shows catalog depth for edm is thin](image-6.png)
+
+```
+#1  Drop the World  [edm / euphoric]  Score: 5.39 / 5.5  genre+mood+ceiling energy
+#2  Gym Hero        [pop / intense]   Score: 1.81 / 5.5  energy fit only
+#3  Fuego de Noche  [latin / festive] Score: 1.79 / 5.5  energy+valence+acoustic fit
+#4  Sunrise City    [pop / happy]     Score: 1.74 / 5.5  energy+acousticness fit
+#5  Rooftop Lights  [indie pop/happy] Score: 1.67 / 5.5  energy+acousticness fit
+Observation: no NaN/overflow at boundary values; scoring degrades gracefully. Cliff
+from #1 (5.39) to #2 (1.81) exposes catalog depth problem for under-represented genres.
+```

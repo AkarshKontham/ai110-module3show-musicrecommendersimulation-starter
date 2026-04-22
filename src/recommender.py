@@ -68,23 +68,28 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     score = 0.0
     reasons = []
 
-    # Genre match: +2.0 (largest fixed bonus — most deliberate user choice)
+    # EXPERIMENT: Weight Shift — genre halved (+1.0), energy doubled (up to +2.0).
+    # Max score stays 5.5 (1.0 + 1.5 + 2.0 + 0.5 + 0.5).
+    # Hypothesis: continuous energy proximity should surface cross-genre songs
+    # whose vibe matches better than a genre label alone would predict.
+
+    # Genre match: +1.0 (halved from +2.0)
     if song['genre'] == user_prefs['genre']:
-        score += 2.0
-        reasons.append("genre match (+2.0)")
+        score += 1.0
+        reasons.append("genre match (+1.0)")
     else:
         reasons.append(f"no genre match  (song: {song['genre']}, want: {user_prefs['genre']}) (+0.0)")
 
-    # Mood match: +1.5 (emotional intent signal)
+    # Mood match: +1.5 (unchanged)
     if song['mood'] == user_prefs['mood']:
         score += 1.5
         reasons.append("mood match (+1.5)")
     else:
         reasons.append(f"no mood match  (song: {song['mood']}, want: {user_prefs['mood']}) (+0.0)")
 
-    # Energy similarity: up to +1.0
+    # Energy similarity: up to +2.0 (doubled from +1.0)
     # Both values are in [0, 1], so difference is at most 1.0
-    energy_points = (1.0 - abs(user_prefs['energy'] - song['energy'])) * 1.0
+    energy_points = (1.0 - abs(user_prefs['energy'] - song['energy'])) * 2.0
     score += energy_points
     reasons.append(f"energy similarity  {song['energy']:.2f} vs {user_prefs['energy']:.2f} (+{energy_points:.2f})")
 

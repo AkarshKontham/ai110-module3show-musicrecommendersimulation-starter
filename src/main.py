@@ -9,74 +9,104 @@ from src.recommender import load_songs, recommend_songs
 
 
 # ---------------------------------------------------------------------------
-# Taste profiles
-# Each dict maps to the keys score_song() recognises:
-#   genre, mood, energy, valence, likes_acoustic
-#
-# Three contrasting profiles are defined so the recommender's ability to
-# differentiate is easy to observe:
-#
-#   CHILL_LISTENER  — low energy, acoustic, chill mood
-#   WORKOUT_FAN     — high energy, electronic, intense mood
-#   WEEKEND_DRIVER  — mid-high energy, upbeat, no strong acoustic preference
-#
-# CHILL_LISTENER and WORKOUT_FAN should produce near-inverted rankings for
-# extreme songs like "Library Rain" vs "Shatter the Glass".
+# Standard taste profiles
 # ---------------------------------------------------------------------------
 
 CHILL_LISTENER = {
-    "genre":         "lofi",
-    "mood":          "chill",
-    "energy":        0.38,   # targets the lofi cluster (0.35–0.42)
-    "valence":       0.60,   # neutral-to-warm; not seeking euphoria
-    "likes_acoustic": True,  # prefers organic, unplugged texture
+    "genre":          "lofi",
+    "mood":           "chill",
+    "energy":         0.38,
+    "valence":        0.60,
+    "likes_acoustic": True,
 }
 
 WORKOUT_FAN = {
-    "genre":         "rock",
-    "mood":          "intense",
-    "energy":        0.90,   # targets the high-energy cluster (0.91–0.97)
-    "valence":       0.65,   # pumped up but not melancholic
-    "likes_acoustic": False, # prefers polished, high-production sound
-}
-
-WEEKEND_DRIVER = {
-    "genre":         "pop",
-    "mood":          "happy",
-    "energy":        0.78,   # upbeat but not gym-level
-    "valence":       0.80,   # bright and positive
+    "genre":          "rock",
+    "mood":           "intense",
+    "energy":         0.90,
+    "valence":        0.65,
     "likes_acoustic": False,
 }
 
-ACTIVE_PROFILE = WEEKEND_DRIVER   # ← swap this to test different profiles
+WEEKEND_DRIVER = {
+    "genre":          "pop",
+    "mood":           "happy",
+    "energy":         0.78,
+    "valence":        0.80,
+    "likes_acoustic": False,
+}
+
+# ---------------------------------------------------------------------------
+# Adversarial / edge-case profiles
+#
+# CONFLICTED_SOUL  — energy=0.9 (gym-level) + mood="sad" + likes_acoustic=True.
+#   Contradiction: high-energy songs are almost never acoustic or sad.
+#   Expected: scorer can't satisfy all three; genre & mood mismatches pile up.
+#
+# GENRE_GHOST      — genre="country" does not exist in the catalog at all.
+#   Expected: every song scores 0 on genre (+2.0 is always missing); the
+#   energy/valence/acousticness components alone decide the ranking.
+#
+# THE_MAXIMIZER    — every numeric preference pushed to its ceiling.
+#   energy=1.0, valence=1.0, likes_acoustic=False, genre="edm", mood="euphoric".
+#   Expected: "Drop the World" should dominate; tests that the scorer doesn't
+#   overflow or produce NaN at boundary values.
+# ---------------------------------------------------------------------------
+
+CONFLICTED_SOUL = {
+    "genre":          "lofi",
+    "mood":           "sad",
+    "energy":         0.90,   # wants lofi but also gym-level intensity
+    "valence":        0.20,   # very negative emotional tone
+    "likes_acoustic": True,   # wants organic texture despite high energy
+}
+
+GENRE_GHOST = {
+    "genre":          "country",   # absent from catalog — genre bonus always 0
+    "mood":           "nostalgic",
+    "energy":         0.35,
+    "valence":        0.60,
+    "likes_acoustic": True,
+}
+
+THE_MAXIMIZER = {
+    "genre":          "edm",
+    "mood":           "euphoric",
+    "energy":         1.00,   # ceiling value
+    "valence":        1.00,   # ceiling value
+    "likes_acoustic": False,
+}
+
+# ---------------------------------------------------------------------------
+# All profiles to run, in display order
+# ---------------------------------------------------------------------------
+
+PROFILES = [
+    ("High-Energy Pop",       WEEKEND_DRIVER),
+    ("Chill Lofi",            CHILL_LISTENER),
+    ("Deep Intense Rock",     WORKOUT_FAN),
+    ("Conflicted Soul",       CONFLICTED_SOUL),   # adversarial
+    ("Genre Ghost",           GENRE_GHOST),        # adversarial
+    ("The Maximizer",         THE_MAXIMIZER),      # adversarial
+]
 
 MAX_SCORE = 5.5
 WIDTH     = 62
 
 
-def main() -> None:
-    songs = load_songs("data/songs.csv")
-
-    profile_name = {
-        id(CHILL_LISTENER):  "Late Night Chill",
-        id(WORKOUT_FAN):     "Workout Intensity",
-        id(WEEKEND_DRIVER):  "Weekend Driver",
-    }.get(id(ACTIVE_PROFILE), "Custom Profile")
-
-    # ── header ──────────────────────────────────────────────
+def _print_profile(name: str, prefs: dict, songs: list) -> None:
     print()
     print("=" * WIDTH)
-    print(f"  Music Recommender  |  {profile_name}")
-    print(f"  genre: {ACTIVE_PROFILE['genre']}"
-          f"  |  mood: {ACTIVE_PROFILE['mood']}"
-          f"  |  energy: {ACTIVE_PROFILE['energy']}"
-          f"  |  valence: {ACTIVE_PROFILE['valence']}")
+    print(f"  Music Recommender  |  {name}")
+    print(f"  genre: {prefs['genre']}"
+          f"  |  mood: {prefs['mood']}"
+          f"  |  energy: {prefs['energy']}"
+          f"  |  valence: {prefs['valence']}")
     print(f"  catalog: {len(songs)} songs  |  showing top 5")
     print("=" * WIDTH)
 
-    recommendations = recommend_songs(ACTIVE_PROFILE, songs, k=5)
+    recommendations = recommend_songs(prefs, songs, k=5)
 
-    # ── results ─────────────────────────────────────────────
     print()
     for rank, (song, score, reasons) in enumerate(recommendations, start=1):
         title_line = f"  #{rank}  {song['title']}  by  {song['artist']}"
@@ -88,6 +118,12 @@ def main() -> None:
         for reason in reasons:
             print(f"       > {reason}")
         print("-" * WIDTH)
+
+
+def main() -> None:
+    songs = load_songs("data/songs.csv")
+    for name, prefs in PROFILES:
+        _print_profile(name, prefs, songs)
 
 
 if __name__ == "__main__":
