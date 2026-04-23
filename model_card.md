@@ -1,93 +1,92 @@
 # 🎧 Model Card: Music Recommender Simulation
 
-## 1. Model Name  
+## 1. Model Name
 
-Give your model a short, descriptive name.  
-Example: **VibeFinder 1.0**  
+**VibeMatch 1.0**
 
----
-
-## 2. Intended Use  
-
-Describe what your recommender is designed to do and who it is for. 
-
-Prompts:  
-
-- What kind of recommendations does it generate  
-- What assumptions does it make about the user  
-- Is this for real users or classroom exploration  
+A small, rule-based music recommender that scores songs against a listener's stated preferences and returns the top five.
 
 ---
 
-## 3. How the Model Works  
+## 2. Goal / Task
 
-Explain your scoring approach in simple language.  
+VibeMatch tries to answer one question: given what a user tells us they like, which songs in the catalog are the closest match?
 
-Prompts:  
+It does not learn from listening history. It does not know what other people with similar taste enjoy. It only looks at the song's own properties — genre, mood, energy, and texture — and compares them against what the user typed in.
 
-- What features of each song are used (genre, energy, mood, etc.)  
-- What user preferences are considered  
-- How does the model turn those into a score  
-- What changes did you make from the starter logic  
-
-Avoid code here. Pretend you are explaining the idea to a friend who does not program.
+This is a classroom simulation. It is not connected to real streaming data and is not intended for real users.
 
 ---
 
-## 4. Data  
+## 3. Algorithm Summary
 
-Describe the dataset the model uses.  
+Every song gets a score out of 5.5 points. The score is built from five checks:
 
-Prompts:  
+1. **Genre match** — if the song's genre matches what the user said they like, it gets up to +1.0 points. This is a yes-or-no check.
+2. **Mood match** — if the song's mood tag matches the user's preferred mood, it gets +1.5 points. Also yes-or-no.
+3. **Energy fit** — the closer the song's energy level is to the user's target, the higher this score. A perfect match gives +2.0 points; a complete mismatch gives 0.
+4. **Valence fit** — valence means how positive or negative a song feels. Close match gives up to +0.5 points.
+5. **Acoustic texture** — if the user likes acoustic music, songs with an organic sound are rewarded +0.5. If they prefer produced/electronic, low-acoustic songs are rewarded instead.
 
-- How many songs are in the catalog  
-- What genres or moods are represented  
-- Did you add or remove data  
-- Are there parts of musical taste missing in the dataset  
+Songs are ranked by total score from highest to lowest. The top 5 are returned with a breakdown explaining every point.
 
----
-
-## 5. Strengths  
-
-Where does your system seem to work well  
-
-Prompts:  
-
-- User types for which it gives reasonable results  
-- Any patterns you think your scoring captures correctly  
-- Cases where the recommendations matched your intuition  
+One experiment was run: the genre weight was cut in half (from +2.0 to +1.0) and the energy weight was doubled (from +1.0 to +2.0). This was done to test whether energy — a continuous, nuanced measure — could do a better job than a blunt genre label.
 
 ---
 
-## 6. Limitations and Bias 
+## 4. Data
 
-Where the system struggles or behaves unfairly. 
+The catalog contains **20 songs**. Each song has these fields:
 
-Prompts:  
+| Field | What it means |
+|---|---|
+| genre | Broad style label (pop, lofi, rock, edm, etc.) |
+| mood | Emotional tag (happy, chill, intense, sad, etc.) |
+| energy | How loud and active the song feels, from 0 (very quiet) to 1 (very intense) |
+| valence | How positive or negative the song feels, from 0 (dark) to 1 (joyful) |
+| acousticness | How organic/unplugged the sound is, from 0 (fully produced) to 1 (fully acoustic) |
+| tempo_bpm | Speed of the song — stored but not used in scoring |
+| danceability | How easy it is to dance to — stored but not used in scoring |
 
-- Features it does not consider  
-- Genres or moods that are underrepresented  
-- Cases where the system overfits to one preference  
-- Ways the scoring might unintentionally favor some users
+**Limits of this dataset:**
+
+- 20 songs is very small. Real recommenders use millions.
+- Genre coverage is uneven. Lofi has 3 songs; metal, edm, and classical each have only 1.
+- There are no songs in the energy range 0.56–0.74. Users who prefer moderate-high energy are always at a disadvantage.
+- All songs appear to reflect mainstream Western music. No regional, world, or non-English genres are included.
+- No data was added or removed from the starter set.
+
+---
+
+## 5. Strengths
+
+The system works best when a user's preferences are internally consistent and their genre is well-represented in the catalog.
+
+- **Lofi listeners** get strong, varied results because three lofi songs exist and their energy values span a useful range.
+- **Clear energy extremes** work well. A listener who wants very quiet music and a listener who wants very loud music get almost completely opposite lists, which is the correct behavior.
+- **Explainability is a genuine strength.** Every recommendation comes with a plain-language reason for each point awarded. A user can see exactly why a song ranked where it did, which is rare even in commercial systems.
+- **The weight-shift experiment** improved results for emotionally complex profiles. Doubling the energy weight helped the "Conflicted Soul" profile surface the only genuinely sad song in the catalog, which had been buried before.
+
+---
+
+## 6. Limitations and Bias
 
 **Discovered weakness: the genre bonus creates a filter bubble that buries cross-genre matches.**
 
-The scoring formula awards a large fixed bonus — worth nearly a third of the maximum score — any time a song's genre label exactly matches the user's stated preference. Because this bonus is binary (all-or-nothing), a lofi song with the wrong energy and wrong mood can still outscore a non-lofi song that is a near-perfect fit on every other dimension. During experiments, the "Chill Lofi" profile consistently ranked three lofi tracks in its top three, even when an ambient song ("Spacewalk Thoughts") had an almost identical energy level, matched the mood exactly, and had higher acousticness — it was simply penalized for carrying the wrong genre tag. This means the system never discovers that a user who likes lofi might also love acoustic ambient music, which is exactly the kind of cross-genre insight that makes real recommenders like Spotify feel intelligent. In a real product this behavior would trap users in a narrow loop of the same few songs, reinforcing what they already know rather than expanding their taste.  
+The scoring formula awards a large fixed bonus — worth nearly a third of the maximum score — any time a song's genre label exactly matches the user's stated preference. Because this bonus is binary (all-or-nothing), a lofi song with the wrong energy and wrong mood can still outscore a non-lofi song that is a near-perfect fit on every other dimension. During experiments, the "Chill Lofi" profile consistently ranked three lofi tracks in its top three, even when an ambient song ("Spacewalk Thoughts") had an almost identical energy level, matched the mood exactly, and had higher acousticness — it was simply penalized for carrying the wrong genre tag. This means the system never discovers that a user who likes lofi might also love acoustic ambient music, which is exactly the kind of cross-genre insight that makes real recommenders like Spotify feel intelligent. In a real product this behavior would trap users in a narrow loop of the same few songs, reinforcing what they already know rather than expanding their taste.
+
+**Other limitations:**
+
+- **Mood labels are exact matches.** "Chill" and "relaxed" are treated as completely different, even though they describe nearly the same feeling. A user who types "relaxed" will never get credit for a song tagged "chill."
+- **Acousticness has a hard cutoff at 0.5.** A song at 0.48 is treated as "not acoustic" and one at 0.51 is treated as "fully acoustic." There is no middle ground.
+- **Valence barely matters.** At a maximum of 0.5 points out of 5.5, the emotional positivity of a song is almost irrelevant to the score. A dark, melancholic song and a joyful one can score nearly the same if their energy levels are similar.
+- **Thin-catalog genres are poorly served.** Metal and EDM users get one genre-matched song that will always rank #1, then a list of completely unrelated songs for the rest of their top 5.
 
 ---
 
-## 7. Evaluation  
+## 7. Evaluation
 
-How you checked whether the recommender behaved as expected. 
-
-Prompts:  
-
-- Which user profiles you tested  
-- What you looked for in the recommendations  
-- What surprised you  
-- Any simple tests or comparisons you ran  
-
-No need for numeric metrics unless you created some.
+How you checked whether the recommender behaved as expected.
 
 ---
 
@@ -135,25 +134,57 @@ Both profiles say they want lofi music. The Chill Lofi profile gets exactly what
 
 ---
 
-## 8. Future Work  
+## 8. Intended Use and Non-Intended Use
 
-Ideas for how you would improve the model next.  
+**What this system is for:**
 
-Prompts:  
+- Classroom exploration of how a basic recommender works.
+- Learning how features, weights, and scoring interact.
+- Experimenting with how small changes (like doubling the energy weight) shift recommendations.
 
-- Additional features or preferences  
-- Better ways to explain recommendations  
-- Improving diversity among the top results  
-- Handling more complex user tastes  
+**What this system is NOT for:**
+
+- Real music discovery for actual users. The catalog is too small and not diverse enough.
+- Replacing any real streaming recommendation engine.
+- Making decisions about what music people "should" like based on demographic data — this system does not use or consider any personal, demographic, or historical data.
+- Any commercial or production use.
 
 ---
 
-## 9. Personal Reflection  
+## 9. Ideas for Improvement
 
-A few sentences about your experience.  
+**1. Replace binary mood matching with mood similarity groups.**
+Instead of requiring an exact match between "chill" and "chill," group near-synonyms together. "Chill," "relaxed," and "peaceful" could all be in the same cluster and award partial credit to each other. This would make the mood signal much more useful without needing a complete redesign.
 
-Prompts:  
+**2. Add a diversity rule to the top-k selection.**
+Right now the top 5 can all be the same genre. A simple fix would be to allow at most two songs from the same genre in the final list, forcing the system to reach outside the user's comfort zone for the remaining slots. This directly addresses the filter bubble problem.
 
-- What you learned about recommender systems  
-- Something unexpected or interesting you discovered  
-- How this changed the way you think about music recommendation apps  
+**3. Use a smooth acousticness curve instead of a hard cutoff at 0.5.**
+The current logic gives full credit or zero credit based on whether acousticness is above or below 0.5. Switching to the same proximity formula used for energy — reward songs that are numerically close to the user's preferred acousticness level — would remove the scoring cliff and make the feature behave consistently with the rest of the model.
+
+---
+
+## 10. Personal Reflection
+
+### Biggest learning moment
+
+The biggest shift in my thinking happened during the weight experiment. I started with genre weighted at +2.0 because that felt logical — genre is the first thing anyone says when you ask what music they like. But when I ran the Conflicted Soul profile, the system kept returning quiet lofi tracks for a user who wanted high-energy, sad music. The genre label was so dominant that it drowned out every other signal. Cutting the genre weight in half and doubling the energy weight immediately made the results feel more honest — the one actually-sad song in the catalog finally surfaced. That was the moment I understood that the *weight* of a feature is as important a design decision as choosing the feature in the first place. The math is simple; the judgment about what matters is not.
+
+### How I used AI tools — and where I stayed in charge
+
+I used an AI assistant throughout this project, but the role it played was closer to a calculator or a pair of hands than a decision-maker. I came in with the plan already formed: which profiles to build, what adversarial cases would stress-test the scorer, which experiment to run, and what questions to ask about bias. The AI wrote the code I described and helped format the output. When I said "double energy, halve genre," it implemented that. When I said "add a Conflicted Soul profile with these exact values," it added it.
+
+Where I had to stay sharp was in checking whether the output matched my intent. A few times the AI produced output that was technically correct but missed the point of the test — for example, framing an adversarial result as "working as expected" when the whole point was to show the system behaving poorly. I caught those moments by reading the results myself and asking whether they actually answered the question I had in mind, not the question the AI assumed I was asking. The AI was genuinely useful for speed — generating six profile runs, formatting tables, writing boilerplate — but it could not replace the step of me deciding what was worth testing, reading the output critically, and deciding what the results actually meant.
+
+The honest version of this collaboration is: I was the engineer making calls; the AI was a fast, capable tool that did what I told it to and occasionally needed redirecting.
+
+### What surprised me about simple algorithms feeling like recommendations
+
+The thing that surprised me most is how quickly five arithmetic operations start to feel like taste. When "Library Rain" scored 5.47 / 5.5 for the Chill Lofi profile — genre match, mood match, energy within 0.03, perfect valence, high acousticness — it genuinely felt like the system understood that user. It did not. It added five numbers. The illusion of understanding comes entirely from the fact that the *features were chosen well*, not from any intelligence in the algorithm itself. That realization changed how I think about real recommenders. When Spotify surfaces a song I love, some part of what it's doing is probably this same proximity math, just with hundreds of features and billions of data points instead of five features and twenty songs. The "intelligence" is mostly in the data and the feature engineering, not in the model.
+
+### What I would try next
+
+If I kept building this, the first thing I would change is the mood system. Right now "chill" and "relaxed" are treated as completely different, which is clearly wrong. I would build a small mood similarity map — a lookup table that says "chill is 80% similar to relaxed, 60% similar to peaceful, 0% similar to angry" — and use that to award partial mood credit instead of all-or-nothing. That single change would make the system dramatically less brittle without requiring any new data.
+
+After that I would add a diversity constraint to the top-k selection. Allowing at most two songs from the same genre in the final list would force the system to reach outside the user's stated preference, which is exactly what good recommendations do. Right now the system confirms what you already know. A diversity rule would make it occasionally surprising in a useful way — which is what distinguishes a real recommender from a filter.
+
